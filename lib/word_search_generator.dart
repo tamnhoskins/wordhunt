@@ -69,7 +69,6 @@ class WordSearchGenerator {
   }
   // Function to place a word in the grid in the given direction
   void _placeWord(String word, int row, int col, String direction) {
-print("***TAM: placeWord = $word");
     Color answerColor = _generateRandomColor(_random);
     if (direction == "horizontal") {
       for (int i = 0; i < word.length; i++) {
@@ -101,13 +100,13 @@ print("***TAM: placeWord = $word");
         if (grid[row][col] == ' ') {
           String value = String.fromCharCode(65 + _random.nextInt(26));
           grid[row][col] = value; // Random letter A-Z
-          print("grid[$row][$col] = $value");
         }
       }
     }
   }
 
   int calculateGridSize(List<String> words) {
+    print("***TAM:calculateGridSize words length = ${words.length}");
     // Calculate the total number of characters
     int totalCharacters = words.fold(0, (sum, word) => sum + word.length);
 
@@ -129,7 +128,6 @@ print("***TAM: placeWord = $word");
     for (String word in shuffledWords) {
       if (currentLength + word.length <= availableCells) {
         selectedWords.add(word.toUpperCase());
-        print("selectedWord = $word");
         currentLength += word.length;
       }
     }
@@ -140,6 +138,7 @@ print("***TAM: placeWord = $word");
 
   // Function to generate the word search grid with random word placement
   void fillGrid(List<String> words, int numRows, int numCols) {
+    if(words.isEmpty) { return; }
 
     // Calculate the total number of cells available
     int availableCells = numRows * numCols;
@@ -157,9 +156,9 @@ print("***TAM: placeWord = $word");
     List<String> currentWordsToUse = _randomlySelectWords(filteredWords, availableCells);
 
     // Reset the grid to an empty state before shuffling word placement
-    int size = min(max(numRows, calculateGridSize(currentWords)), numCols);
-    this.numRows = max(numRows, calculateGridSize(currentWords));
-    this.numCols = min(this.numRows, numCols);
+    int size = min(max(numRows, calculateGridSize(currentWordsToUse)), numCols);
+    this.numRows = min(numRows, calculateGridSize(currentWordsToUse));
+    this.numCols = max(this.numRows, numCols);
     grid = List.generate(this.numRows, (_) => List.generate(this.numCols, (_) => ' '));
     colors = List.generate(this.numRows, (_) => List.generate(this.numCols, (_) => Colors.black));
     currentWords.clear();

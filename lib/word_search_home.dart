@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:wordhunt/word_search_generator.dart';
 
 class WordSearchHome extends StatefulWidget {
@@ -34,19 +35,25 @@ class _WordSearchHomeState extends State<WordSearchHome> {
   // Set grid size based on screen dimensions
   void _setGridSize() {
     // Get the screen size
-    double screenWidth = _availableWidth - 16.0;
-    double screenHeight = (_availableHeight * 0.75) - 16.0;
+    double screenWidth = _availableWidth - 16.sp;
+    double screenHeight = (_availableHeight * 0.75) - 16.sp;
 
-    // Set minimum cell size (e.g., 30 pixels)
-    double minCellSize = 30;
+    // Use the smaller of the two dimensions to set rows and columns
+    double smallerDimension = min(screenWidth, screenHeight);
 
-    // Calculate maximum rows and columns based on screen size
-    _numRows = (screenHeight / minCellSize).floor();
-    _numCols = (screenWidth / minCellSize).floor();
+    // Set a minimum cell size (e.g., 30 pixels)
+    double minCellSize = 30.sp; //calculateRowHeight(_availableHeight);
+
+    // Calculate the maximum number of rows and columns based on the smaller dimension
+    _numRows = (smallerDimension / minCellSize).floor();
+    _numCols = (smallerDimension / minCellSize).floor();
 
     // Ensure a minimum of 5 rows and 5 columns
     _numRows = max(_numRows, 5);
     _numCols = max(_numCols, 5);
+
+    print(
+        "***TAM:_setGridSize: _numRows = $_numRows _numCols = $_numCols minCellSize = $minCellSize");
   }
 
   // Function to generate word search puzzle
@@ -85,9 +92,10 @@ class _WordSearchHomeState extends State<WordSearchHome> {
       "plastic",
       "zigzag"
     ];
-    print("Words size = ${_words.length} rows = $_numRows, col = $_numCols");
+
     _setGridSize();
     setState(() {
+      print("***TAM:before fillGrid _words size = ${_words.length}");
       _generator.fillGrid(_words, _numRows, _numCols);
       _grid = _generator.grid;
       _colors = _generator.colors;
@@ -128,6 +136,8 @@ class _WordSearchHomeState extends State<WordSearchHome> {
         builder: (context, constraints) {
           _availableHeight = constraints.maxHeight;
           _availableWidth = constraints.maxWidth;
+          print(
+              "***TAM: layoutbuilder _availableHeight = $_availableHeight _availableWidth = $_availableWidth");
 
           // Calculate 75% for grid and 25% for word list
           double gridHeight = _availableHeight * 0.75;
@@ -147,7 +157,8 @@ class _WordSearchHomeState extends State<WordSearchHome> {
                 ),
                 height: gridHeight,
                 width: _availableWidth,
-                child: _grid.isNotEmpty ? _buildGrid() : Text("No Puzzle"),
+                child:
+                    _currentWords.isNotEmpty ? _buildGrid() : Text("No Puzzle"),
               ),
               // Word list (25% of screen)
               Container(
@@ -171,21 +182,60 @@ class _WordSearchHomeState extends State<WordSearchHome> {
     );
   }
 
+  double _calculateCellHeight(double totalGridHeight)
+  {
+    return totalGridHeight / _numRows;
+  }
+
+  double _calculateCellWidth(double totalGridWidth)
+  {
+    return totalGridWidth / _numCols;
+  }
+
+  double _calculateTotalGridHeight()
+  {
+    return (_availableHeight * 0.75) - 32.sp; // Adjust for padding
+  }
+
+  double _calculateTotalGridWidth()
+  {
+    return _availableWidth - 32.sp;
+  }
+  double _calculateAspectRatio()
+  {
+    double totalGridWidth = _calculateTotalGridWidth();
+    double totalGridHeight = _calculateTotalGridHeight();
+
+    // Calculate the ideal cell width and height
+    double cellWidth = _calculateCellWidth(totalGridWidth);
+    double cellHeight = _calculateCellHeight(totalGridHeight);
+
+    // Ensure all rows fit within the available height
+    if (cellHeight * _numRows > totalGridHeight) {
+      // If the rows overflow, reduce the cell height to fit the grid
+      cellHeight = totalGridHeight / _numRows;
+    }
+
+    // Calculate the aspect ratio for the grid cells
+    return (cellWidth / cellHeight);
+  }
   Widget _buildGrid() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: GridView.builder(
+          key: GlobalKey(),
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: _numCols,
-            childAspectRatio: 1.0,
+            childAspectRatio: _calculateAspectRatio(),
           ),
           itemCount: _numRows * _numCols,
           itemBuilder: (context, index) {
             int row = index ~/ _numCols;
             int col = index % _numCols;
+
             return GridTile(
               child: Container(
                 decoration:
@@ -194,7 +244,7 @@ class _WordSearchHomeState extends State<WordSearchHome> {
                   child: Text(
                     _grid[row][col],
                     style: TextStyle(
-                        fontSize: 20,
+                        fontSize: _calculateCellHeight(_calculateTotalGridHeight()) * 0.5,
                         color: _showAnswer == false
                             ? Colors.black
                             : _colors[row][col]),
@@ -208,9 +258,7 @@ class _WordSearchHomeState extends State<WordSearchHome> {
     );
   }
 
-  double calculateRowHeight() {
-    final screenHeight = MediaQuery.of(context).size.height;
-
+  double calculateRowHeight(screenHeight) {
     if (screenHeight <= 600) {
       // Small screens (mobile)
       return 40.0;
@@ -225,7 +273,7 @@ class _WordSearchHomeState extends State<WordSearchHome> {
 
   Widget _buildWordList(double wordListHeight) {
     final double rowHeight =
-        calculateRowHeight(); // Adjust as needed for better fit
+        calculateRowHeight(wordListHeight); // Adjust as needed for better fit
     final int numberOfRows = ((wordListHeight - 16.0) / rowHeight)
         .floor(); // Calculate number of rows
 
